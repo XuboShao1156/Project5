@@ -1,0 +1,32 @@
+#!python3
+
+import argparse
+import os
+import sys
+
+
+# parse args
+parser = argparse.ArgumentParser(description='Deploy CDN.')
+parser.add_argument('-p')
+parser.add_argument('-o')
+parser.add_argument('-n')
+parser.add_argument('-u')
+parser.add_argument('-i')
+
+args = parser.parse_args(sys.argv[1:])
+port = int(args.p)
+origin = args.o
+name = args.n
+username = args.u
+keyfile = args.i
+
+
+# run command on remote nodes
+def run(nodes, command):
+    for node in nodes:
+        os.popen('ssh -i {} {}@{} \'{}\' &'.format(keyfile, username, node, command)).read()
+
+
+# run dns
+with open('./dns_nodes', 'r') as f:
+    run(f.readlines(), 'python3 ./dns/main.py {} {}'.format(port, name))

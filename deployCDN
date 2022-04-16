@@ -1,0 +1,33 @@
+#!python3
+
+import argparse
+import sys
+import os
+
+# parse args
+parser = argparse.ArgumentParser(description='Deploy CDN.')
+parser.add_argument('-p')
+parser.add_argument('-o')
+parser.add_argument('-n')
+parser.add_argument('-u')
+parser.add_argument('-i')
+
+args = parser.parse_args(sys.argv[1:])
+port = int(args.p)
+origin = args.o
+name = args.n
+username = args.u
+keyfile = args.i
+
+
+# upload local files to the directory of remote nodes
+def upload(files, nodes, directory):
+    for node in nodes:
+        os.popen('ssh -i {} {}@{} \'mkdir {}\''.format(keyfile, username, node, directory)).read()
+        os.popen('scp -i {} {} {}@{}:{}\\'.format(keyfile, ' '.join(files), username, node, directory)).read()
+
+
+# upload dns
+with open('./dns_nodes', 'r') as f:
+    upload(['./dns/__init__.py', './dns/server.py', './dns/main.py'], f.readlines(), 'dns')
+
