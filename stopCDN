@@ -20,14 +20,19 @@ username = args.u
 keyfile = args.i
 
 
-# run command on remote nodes
-def run(nodes, command):
+# run command on remote nodes and return result
+def run(node, command):
+    return os.popen('ssh -i {} {}@{} \"{}\"'.format(keyfile, username, node, command)).read()
+
+
+def stop(nodes):
     for node in nodes:
-        os.popen('ssh -i {} {}@{} \'{}\''.format(keyfile, username, node, command))
-        print('started on node ' + node)
+        out = run(node, 'lsof -i:{}'.format(port))
+        run(node, 'kill ' + out.split('\n')[1].split(' ')[1])
+        print('stopped on node ' + node)
 
 
-# run dns
-print('start dns servers...')
+# stop dns and https
+print('stop dns servers...')
 with open('./dns_nodes', 'r') as f:
-    run(f.readlines(), 'python3 ~/dns/main.py {} {}'.format(port, name))
+    stop(f.readlines())

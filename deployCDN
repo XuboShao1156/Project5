@@ -23,6 +23,7 @@ keyfile = args.i
 # upload local files to the directory of remote nodes
 def upload(files, nodes, directory):
     for node in nodes:
+        os.popen('ssh -i {} {}@{} \'rm -r {}\''.format(keyfile, username, node, directory)).read()
         os.popen('ssh -i {} {}@{} \'mkdir {}\''.format(keyfile, username, node, directory)).read()
         os.popen('scp -i {} {} {}@{}:{}\\'.format(keyfile, ' '.join(files), username, node, directory)).read()
 
