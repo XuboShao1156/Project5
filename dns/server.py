@@ -1,5 +1,4 @@
 # this file constructs the frontend of a dns server to serve dns request
-import socket
 import socketserver
 import sys
 

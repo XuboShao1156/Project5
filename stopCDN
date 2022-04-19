@@ -28,6 +28,13 @@ def run(node, command):
 def stop(nodes):
     for node in nodes:
         out = run(node, 'lsof -i:{}'.format(port))
+        if out == '':
+            print('failed stop on node {}, cannot get pid on given port'.format(node))
+            continue
+        if 'Too many logins' in out:
+            print('failed stop on node {}, too many logins'.format(node))
+            continue
+
         run(node, 'kill ' + out.split('\n')[1].split(' ')[1])
         print('stopped on node ' + node)
 

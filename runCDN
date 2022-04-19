@@ -35,4 +35,4 @@ with open('./dns_nodes', 'r') as f:
 # run dns
 print('start http servers...')
 with open('./replica_server', 'r') as f:
-    run(f.readlines(), 'python3 ~/http/httpserver.py {} {}'.format(port, name))
+    run(f.readlines(), 'python3 ~/http/httpserver.py -p {} -o {}'.format(port, origin))
