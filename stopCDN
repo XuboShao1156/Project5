@@ -36,3 +36,8 @@ def stop(nodes):
 print('stop dns servers...')
 with open('./dns_nodes', 'r') as f:
     stop(f.readlines())
+
+# stop http and https
+print('stop http servers...')
+with open('./replica_server', 'r') as f:
+    stop(f.readlines())
