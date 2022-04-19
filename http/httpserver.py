@@ -20,7 +20,8 @@ def get_page_from_origin(url):
     response = requests.get(url)
     return response
 
-
+#currently using python lib simulate lru cache.
+#@lru_cache(maxsize = 20 * 1024)
 def get_page(url):
     print("looking up in cache...")
     if url not in cache:
@@ -30,6 +31,11 @@ def get_page(url):
 
 class CDNHTTP(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == '/grading/beacon' :
+            self.send_response(204)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            return
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
