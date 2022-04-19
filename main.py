@@ -1,6 +1,6 @@
 import socketserver
 import sys
-from server import Server
+from dnsserver import Server
 
 if __name__ == '__main__':
     with socketserver.UDPServer(('0.0.0.0', int(sys.argv[1])), Server) as server:
