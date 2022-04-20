@@ -3,9 +3,10 @@
 # this file constructs the frontend of a dns server to serve dns request
 import socketserver
 import sys
-
+from mapping import map_replica
 from dnslib import DNSRecord, RR, QTYPE, CLASS, A
 
+PORT = sys.argv[1]
 NAME = sys.argv[2]
 
 
@@ -16,7 +17,7 @@ class Server(socketserver.BaseRequestHandler):
         ans = query.reply()
         for q in query.questions:
             if q.qname == NAME:
-                ans.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 60, A("50.116.41.109")))
+                ans.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 60, A(map_replica(self.client_address[0]))))
 
         if len(ans.rr) != 0:
             conn.sendto(ans.pack(), self.client_address)
@@ -44,3 +45,8 @@ class Server(socketserver.BaseRequestHandler):
 #
 #         if len(ans.rr) != 0:
 #             self.conn.sendto(ans.pack(), addr)
+
+
+if __name__ == '__main__':
+    with socketserver.UDPServer(('0.0.0.0', int(PORT)), Server) as server:
+        server.serve_forever()
