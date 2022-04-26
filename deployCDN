@@ -24,14 +24,14 @@ keyfile = args.i
 def upload(files, nodes, directory):
     for node in nodes:
         node = node.strip()
-        os.popen('ssh -i {} {}@{} \'rm -rf {}\''.format(keyfile, username, node, directory))
-        os.popen('ssh -i {} {}@{} \'mkdir {}\''.format(keyfile, username, node, directory))
-        os.popen('scp -i {} {} {}@{}:{}\\'.format(keyfile, ' '.join(files), username, node, directory))
+        os.popen('ssh -i {} {}@{} \'rm -rf ~/{}\''.format(keyfile, username, node, directory)).read()
+        os.popen('ssh -i {} {}@{} \'mkdir ~/{}\''.format(keyfile, username, node, directory)).read()
+        os.popen('scp -i {} {} {}@{}:~/{}\\'.format(keyfile, ' '.join(files), username, node, directory)).read()
 
 
 # upload dns
 with open('./dns_nodes', 'r') as f:
-    upload(['./__init__.py', './dnsserver', './mapping.py', './geo.py'], f.readlines(), 'p5')
+    upload(['./__init__.py', './dnsserver', './mapping.py', './geo.py', './geo_db.csv'], f.readlines(), 'p5')
 
 # upload http
 with open('./replica_server', 'r') as f:
