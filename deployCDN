@@ -34,6 +34,6 @@ with open('./dns_nodes', 'r') as f:
 
 # upload http
 with open('./replica_server', 'r') as f:
-    upload(['./httpserver'], f.readlines(), 'p5')
+    upload(['./httpserver', './pageview.csv'], f.readlines(), 'p5')
 
-#./deployCDN -p 40007 -o cs5700cdnorigin.ccs.neu.edu -n <name> -u content_destroy_ninjas -i <keyfile>
+# ./deployCDN -p 40007 -o cs5700cdnorigin.ccs.neu.edu -n <name> -u content_destroy_ninjas -i <keyfile>

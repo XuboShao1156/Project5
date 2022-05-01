@@ -185,9 +185,6 @@ class CDNHTTP(BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.end_headers()
             return
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
 
         page = get_page(self.path, Scache)
         if page.status_code == 404:
