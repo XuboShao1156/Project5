@@ -41,7 +41,7 @@ class Cache(object):
         with open(freq_file) as f:
             for row in csv.reader(f):
                 self.freq[row[0]] = int(row[1])
-
+        os.remove('./pageview.csv')
         self.mem_cache = dict()  # path -> content in bytes
 
         self.disk_cache = dict()  # path -> len(content)
