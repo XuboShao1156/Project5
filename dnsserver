@@ -4,7 +4,7 @@
 import socketserver
 import sys
 
-from dnslib import DNSRecord, RR, QTYPE, CLASS, A
+from   dnslib import DNSRecord, RR, QTYPE, CLASS, A
 
 NAME = sys.argv[2]
 

@@ -2,36 +2,132 @@
 
 import sys
 import socket
+import collections
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from functools import lru_cache
+import pandas as pd
 import requests
-from functools import lru_cache
+from pympler import asizeof
+import psutil
 
+pageview = pd.read_csv("./pageviews.csv")
+
+memoryLimit = 20 * 1024 * 1024
+diskSizeLimit = 20 * 1000 * 1000
+# Total 20MB Disk space across all folders.
+# RSS limited to 20MB.
 port = int(sys.argv[2])
 origin = 'cs5700cdnorigin.ccs.neu.edu'
 # binding to all ip address.
 host = '0.0.0.0'
 
-cache = dict()
+from collections import OrderedDict
+
+import heapq
 
 
-def get_page_from_origin(url):
-    print("getting page from origin...")
-    response = requests.get(url)
-    return response
+class LFUCache(object):
 
-#currently using python lib simulate lru cache.
-#@lru_cache(maxsize = 20 * 1024)
-def get_page(url):
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.time = 0
+        self.map = {}  # key to value
+        self.freq_time = {}  # key to (freq, time)
+        self.priority_queue = []  # (freq, time, key), only updated when new key is added
+        #self.update = set()  # keys that have been get/put since last new key was added
+
+    def get(self, path):
+        self.time += 1
+
+        if path in self.map:
+            freq, time = self.freq_time[path]
+            self.freq_time[path] = (freq, self.time)
+
+            return self.map[path]
+
+        return -1
+
+    def put(self, path, page):
+        if self.capacity <= 0:
+            return
+
+        var = pageview.loc[pageview['path'] == path]
+
+        if var.empty:
+            print('no such page')
+            freq = 0
+        else:
+            freq = int(var['hits'])
+
+        self.time += 1
+        if path not in self.map:
+            if len(page) > memoryLimit:
+                return
+            while (len(self.map) + len(page)) >= self.capacity:  # must remove least frequent from cache
+
+                while self.priority_queue:
+                    # whilst (least frequent, oldest) needs to be updated, update it and add back to heap
+                    qfreq, qtime, qkey = heapq.heappop(self.priority_queue)
+                    if qfreq < freq:
+                        self.map.pop(qkey)
+                        self.freq_time.pop(qkey)
+                        self.freq_time[path] = (freq, self.time)
+                        heapq.heappush(self.priority_queue, (freq, self.time, path))
+                    else:
+                        f, t = self.freq_time[qkey]
+                        heapq.heappush(self.priority_queue, (qfreq, qtime, qkey))
+                    #self.update.remove(k)
+
+
+                # remove (least frequent, oldest)
+                #_, _, k = heapq.heappop(self.priority_queue)
+                #self.map.pop(k)
+                #self.freq_time.pop(k)
+
+            self.freq_time[path] = (freq, self.time)
+            heapq.heappush(self.priority_queue, (freq, self.time, path))
+
+        else:
+            freq, time = self.freq_time[path]
+            self.freq_time[path] = (freq, self.time)
+            #self.update.add(path)
+
+        self.map[path] = page
+
+
+def get_page(path, lfucache):
     print("looking up in cache...")
-    if url not in cache:
-        cache[url] = get_page_from_origin(url)
-    return cache[url]
+
+    if lfucache.get(path) == -1:
+        response = get_page_from_origin(path)
+        lfucache.put(path, response)
+        return response
+    else:
+        response = get_page_from_origin(path)
+        if response == '404':
+            return response
+        else:
+            lfucache.put(path, response)
+        return response
+
+
+def get_page_from_origin(path):
+    print("getting page from origin...")
+    req = origin + ":" + str(port) + path
+    response = requests.get(req)
+    if response.status_code == 404:
+        return '404'
+    return response
 
 
 class CDNHTTP(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/grading/beacon' :
+    mem = psutil.virtual_memory()
+    if mem > memoryLimit:
+        cache = LFUCache(0)
+    else:
+        cache = LFUCache(memoryLimit - mem.used)
+
+    def do_GET(self, Scache=cache):
+        if self.path == '/grading/beacon':
             self.send_response(204)
             self.send_header("Content-type", "text/html")
             self.end_headers()
@@ -40,10 +136,11 @@ class CDNHTTP(BaseHTTPRequestHandler):
         self.send_header("Content-type", "text/html")
         self.end_headers()
 
-        url = origin + ":" + str(port) + self.path
-        page = get_page(url)
+        page = get_page(self.path, Scache)
+
         self.wfile.write(page)
 
+    # shutdown http server.
     def terminateConnection(self):
         self.server.shutdown()
         print('HTTP Server shutdown')
