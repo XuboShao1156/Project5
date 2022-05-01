@@ -8,90 +8,149 @@ import pandas as pd
 import requests
 from pympler import asizeof
 import psutil
+import heapq
 
 pageview = pd.read_csv("./pageviews.csv")
 
 memoryLimit = 20 * 1024 * 1024
-diskSizeLimit = 20 * 1000 * 1000
+diskSizeLimit = 20 * 1024 * 1024
 # Total 20MB Disk space across all folders.
 # RSS limited to 20MB.
 port = int(sys.argv[2])
 origin = 'cs5700cdnorigin.ccs.neu.edu'
 # binding to all ip address.
 host = '0.0.0.0'
+mem = psutil.virtual_memory()
 
-from collections import OrderedDict
 
+import csv
+import os
 import heapq
 
+MEM_MIN_FREQ = 5000
 
-class LFUCache(object):
 
-    def __init__(self, capacity):
-        self.capacity = capacity
-        self.time = 0
-        self.map = {}  # key to value
-        self.freq_time = {}  # key to (freq, time)
-        self.priority_queue = []  # (freq, time, key), only updated when new key is added
-        #self.update = set()  # keys that have been get/put since last new key was added
+# cache for html pages
+class Cache(object):
+    def __init__(self, mem_min_freq=MEM_MIN_FREQ, disk_threshold=18_000_000, disk_folder='./pages',
+                 freq_file='pageviews.csv'):
+        self.mem_min_freq = mem_min_freq
+        # minimal frequency requirement to store the page in memory
 
-    def get(self, path):
-        self.time += 1
+        self.freq = dict()  # path -> frequency
+        with open(freq_file) as f:
+            for row in csv.reader(f):
+                self.freq[row[0]] = int(row[1])
 
-        if path in self.map:
-            freq, time = self.freq_time[path]
-            self.freq_time[path] = (freq, self.time)
+        self.mem_cache = dict()  # path -> content in bytes
 
-            return self.map[path]
+        self.disk_cache = dict()  # path -> len(content)
+        self.disk_queue = []  # queue of pages prioritized by frequency
 
-        return -1
+        self.disk_usage = 0
+        self.disk_threshold = disk_threshold  # maximum disk usage
 
-    def put(self, path, page):
-        if self.capacity <= 0:
-            return
+        self.disk_folder = disk_folder  # folder to store pages
+        if os.path.exists(disk_folder):
+            os.popen('rm -rf ' + disk_folder).read()
+        os.mkdir(disk_folder)
 
-        var = pageview.loc[pageview['path'] == path]
+    def put(self, page: str, content: bytes) -> None:
+        if self.freq[page] > self.mem_min_freq and mem.used < memoryLimit:  # store page in memory
+            self.mem_cache[page] = content
+        else:  # store page in disk
+            # if disk is full and new page has a higher frequency, pop the least frequent item out
+            while self.disk_usage + len(content) >= self.disk_threshold and self.freq[page] > self.freq[
+                self.disk_queue[0][1]]:
+                victim_page = heapq.heappop(self.disk_queue)
+                os.remove(self.disk_folder + '/' + victim_page[1])
+                self.disk_usage -= self.disk_cache[victim_page[1]]
+                del self.disk_cache[victim_page[1]]
 
-        if var.empty:
-            print('no such page')
-            freq = 0
+            # if disk is not full, write the page
+            if self.disk_usage + len(content) < self.disk_threshold:
+                heapq.heappush(self.disk_queue, (self.freq[page], page))
+                with open(self.disk_folder + '/' + page, 'wb') as f:
+                    f.write(content)
+                self.disk_usage += len(content)
+                self.disk_cache[page] = len(content)
+
+    def get(self, page) -> bytes:
+        if page in self.mem_cache:
+            return self.mem_cache[page]
+        elif page in self.disk_cache:
+            with open(self.disk_folder + '/' + page, 'rb') as f:
+                return f.read()
         else:
-            freq = int(var['hits'])
-
-        self.time += 1
-        if path not in self.map:
-            if len(page) > memoryLimit:
-                return
-            while (len(self.map) + len(page)) >= self.capacity:  # must remove least frequent from cache
-
-                while self.priority_queue:
-                    # whilst (least frequent, oldest) needs to be updated, update it and add back to heap
-                    qfreq, qtime, qkey = heapq.heappop(self.priority_queue)
-                    if qfreq < freq:
-                        self.map.pop(qkey)
-                        self.freq_time.pop(qkey)
-                        self.freq_time[path] = (freq, self.time)
-                        heapq.heappush(self.priority_queue, (freq, self.time, path))
-                    else:
-                        f, t = self.freq_time[qkey]
-                        heapq.heappush(self.priority_queue, (qfreq, qtime, qkey))
-                    #self.update.remove(k)
+            return b''
 
 
-                # remove (least frequent, oldest)
-                #_, _, k = heapq.heappop(self.priority_queue)
-                #self.map.pop(k)
-                #self.freq_time.pop(k)
-
-            self.freq_time[path] = (freq, self.time)
-            heapq.heappush(self.priority_queue, (freq, self.time, path))
-
-        else:
-            freq, time = self.freq_time[path]
-            self.freq_time[path] = (freq, self.time)
-            #self.update.add(path)
-
-        self.map[path] = page
+# class LFUCache(object):
+#
+#     def __init__(self, capacity):
+#         self.capacity = capacity
+#
+#         # self.time = 0
+#         self.map = {}  # key to value
+#         self.freq_time = {}  # key to freq
+#         self.priority_queue = []  # (freq key), only updated when new key is added
+#
+#     def get(self, path):
+#         # self.time += 1
+#
+#         if path in self.map:
+#             freq = self.freq_time[path]
+#             self.freq_time[path] = freq
+#
+#             return self.map[path]
+#
+#         return -1
+#
+#     def put(self, path, page):
+#         if self.capacity <= 0:
+#             return
+#
+#         var = pageview.loc[pageview['path'] == path]
+#
+#         if var.empty:
+#             print('no such page')
+#             freq = 0
+#         else:
+#             freq = int(var['hits'])
+#
+#         # self.time += 1
+#         if path not in self.map:
+#             if len(page) > self.capacity:
+#                 return
+#             while (len(self.map) + len(page)) >= self.capacity:  # must remove least frequent from cache
+#
+#                 while self.priority_queue:
+#
+#                     qfreq, qkey = heapq.heappop(self.priority_queue)
+#                     if qfreq < freq:
+#                         self.map.pop(qkey)
+#                         # self.freq_time.pop(qkey)
+#                         self.freq_time[path] = freq
+#                         heapq.heappush(self.priority_queue, (freq, path))
+#                     else:
+#                         f = self.freq_time[qkey]
+#                         heapq.heappush(self.priority_queue, (qfreq, qkey))
+#                     # self.update.remove(k)
+#
+#                 # remove (least frequent, oldest)
+#                 # _, _, k = heapq.heappop(self.priority_queue)
+#                 # self.map.pop(k)
+#                 # self.freq_time.pop(k)
+#
+#             self.freq_time[path] = freq
+#             heapq.heappush(self.priority_queue, (freq, path))
+#
+#         else:
+#             freq, time = self.freq_time[path]
+#             self.freq_time[path] = freq
+#             # self.update.add(path)
+#
+#         self.map[path] = page
 
 
 def get_page(path, lfucache):
@@ -99,14 +158,13 @@ def get_page(path, lfucache):
 
     if lfucache.get(path) == -1:
         response = get_page_from_origin(path)
-        lfucache.put(path, response)
-        return response
-    else:
-        response = get_page_from_origin(path)
-        if response == '404':
+        if response.status_code == 404:
             return response
         else:
             lfucache.put(path, response)
+        return response
+    else:
+        response = lfucache.get(path)
         return response
 
 
@@ -114,19 +172,14 @@ def get_page_from_origin(path):
     print("getting page from origin...")
     req = origin + ":" + str(port) + path
     response = requests.get(req)
-    if response.status_code == 404:
-        return '404'
+
     return response
 
 
 class CDNHTTP(BaseHTTPRequestHandler):
-    mem = psutil.virtual_memory()
-    if mem > memoryLimit:
-        cache = LFUCache(0)
-    else:
-        cache = LFUCache(memoryLimit - mem.used)
+    lfucache = Cache(mem_min_freq=50_000, disk_threshold=27)
 
-    def do_GET(self, Scache=cache):
+    def do_GET(self, Scache=lfucache):
         if self.path == '/grading/beacon':
             self.send_response(204)
             self.send_header("Content-type", "text/html")
@@ -137,6 +190,12 @@ class CDNHTTP(BaseHTTPRequestHandler):
         self.end_headers()
 
         page = get_page(self.path, Scache)
+        if page.status_code == 404:
+            self.send_error(404, 'Page not Found')
+        else:
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
 
         self.wfile.write(page)
 
