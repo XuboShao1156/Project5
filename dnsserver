@@ -30,30 +30,6 @@ class Server(socketserver.BaseRequestHandler):
             conn.sendto(ans.pack(), self.client_address)
         print('total: ' + str(time.time() - start), end='\n\n')
 
-# class Server(object):
-#     def __init__(self, port, name):
-#         self.port = port
-#         self.name = name
-#
-#         self.conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#         self.conn.bind(('0.0.0.0', self.port))
-#
-#     def serve(self) -> None:
-#         while True:
-#             self.__handle(self.conn.recvfrom(1024))
-#
-#     def __handle(self, req) -> None:
-#         query, addr = DNSRecord.parse(req[0]), req[1]
-#         print(query, addr)
-#
-#         ans = query.reply()
-#         for q in query.questions:
-#             if q.qname == NAME:
-#                 ans.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 60, A("50.116.41.109")))
-#
-#         if len(ans.rr) != 0:
-#             self.conn.sendto(ans.pack(), addr)
-
 
 if __name__ == '__main__':
     with socketserver.UDPServer(('0.0.0.0', int(PORT)), Server) as server:
