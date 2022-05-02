@@ -61,8 +61,10 @@ class Cache(object):
 
     def get(self, page) -> bytes:
         if page in self.mem_cache:
+            print('fetch page {} from memory...'.format(page))
             return self.mem_cache[page]
         elif page in self.disk_cache:
+            print('fetch page {} from disk...'.format(page))
             with open(self.disk_folder + '/' + page, 'rb') as f:
                 return f.read()
         else:
