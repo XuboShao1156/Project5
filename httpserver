@@ -19,9 +19,6 @@ class CDNHTTP(BaseHTTPRequestHandler):
             return
 
         page = requests.utils.unquote(self.path[1:])
-        if 'outbreak_of_novel_' in page:
-            print('error')
-
         content = cache.get(page)
         if len(content) == 0:
             print('downloading from origin...')
