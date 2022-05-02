@@ -39,7 +39,7 @@ with open('./dns_nodes', 'r') as f:
     upload(['./__init__.py', './dnsserver', './mapping.py', './geo.py', './geo_db.csv'], nodes)
 
 # upload http
-# with open('./replica_server', 'r') as f:
-#     upload(['./httpserver'], f.readlines(), 'p5')
+with open('./replica_server', 'r') as f:
+    upload(['./httpserver'], f.readlines(), 'p5')
 
 #./deployCDN -p 40007 -o cs5700cdnorigin.ccs.neu.edu -n <name> -u content_destroy_ninjas -i <keyfile>
