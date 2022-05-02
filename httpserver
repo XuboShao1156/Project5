@@ -1,70 +1,12 @@
 #!python3
 import sys
 import requests
-import csv
-import os
-import heapq
+import requests.utils
+from cache import Cache, MEM_MIN_FREQ, DISK_LIMIT
 from http.server import HTTPServer, BaseHTTPRequestHandler
-
-DISK_LIMIT = 20 * 1024 * 1024
-MEM_MIN_FREQ = 5500
 
 PORT = int(sys.argv[1])
 ORIGIN = sys.argv[2]
-
-# cache for html pages
-class Cache(object):
-    def __init__(self, mem_min_freq=MEM_MIN_FREQ, disk_threshold=18_000_000,
-                 disk_folder='./pages', freq_file='pageviews.csv'):
-        self.mem_min_freq = mem_min_freq
-        # minimal frequency requirement to store the page in memory
-
-        self.freq = dict()  # path -> frequency
-        with open(freq_file) as f:
-            for row in csv.reader(f):
-                self.freq[row[0]] = int(row[1])
-        # os.remove(freq_file)
-        self.mem_cache = dict()  # path -> content in bytes
-
-        self.disk_cache = dict()  # path -> len(content)
-        self.disk_queue = []  # queue of pages prioritized by frequency
-
-        self.disk_usage = 0
-        self.disk_threshold = disk_threshold  # maximum disk usage
-
-        self.disk_folder = disk_folder  # folder to store pages
-        if os.path.exists(disk_folder):
-            os.popen('rm -rf ' + disk_folder).read()
-        os.mkdir(disk_folder)
-
-    def put(self, page: str, content: bytes) -> None:
-        if self.freq[page] > self.mem_min_freq:  # store page in memory
-            self.mem_cache[page] = content
-        else:  # store page in disk
-            # if disk is full and new page has a higher frequency, pop the least frequent item out
-            while self.disk_usage + len(content) >= self.disk_threshold \
-                    and self.freq[page] > self.freq[self.disk_queue[0][1]]:
-                victim_page = heapq.heappop(self.disk_queue)
-                os.remove(self.disk_folder + '/' + victim_page[1])
-                self.disk_usage -= self.disk_cache[victim_page[1]]
-                del self.disk_cache[victim_page[1]]
-
-            # if disk is not full, write the page
-            if self.disk_usage + len(content) < self.disk_threshold:
-                heapq.heappush(self.disk_queue, (self.freq[page], page))
-                with open(self.disk_folder + '/' + page, 'wb') as f:
-                    f.write(content)
-                self.disk_usage += len(content)
-                self.disk_cache[page] = len(content)
-
-    def get(self, page) -> bytes:
-        if page in self.mem_cache:
-            return self.mem_cache[page]
-        elif page in self.disk_cache:
-            with open(self.disk_folder + '/' + page, 'rb') as f:
-                return f.read()
-        else:
-            return b''
 
 class CDNHTTP(BaseHTTPRequestHandler):
     lfucache = Cache(mem_min_freq=MEM_MIN_FREQ, disk_threshold=DISK_LIMIT)
@@ -72,11 +14,14 @@ class CDNHTTP(BaseHTTPRequestHandler):
     def do_GET(self, cache=lfucache):
         if self.path == '/grading/beacon':
             self.send_response(204)
-            self.send_header("Content-type", "text/html")
+            self.send_header("Content-Type", "text/html")
             self.end_headers()
             return
 
-        page = self.path[1:]
+        page = requests.utils.unquote(self.path[1:])
+        if 'outbreak_of_novel_' in page:
+            print('error')
+
         content = cache.get(page)
         if len(content) == 0:
             print('downloading from origin...')
@@ -90,6 +35,7 @@ class CDNHTTP(BaseHTTPRequestHandler):
             cache.put(page, content)
 
         self.send_response(200)
+        self.send_header("Content-Type", "text/html")
         self.end_headers()
         self.wfile.write(content)
 
