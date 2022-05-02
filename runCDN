@@ -23,7 +23,7 @@ keyfile = args.i
 # run command on remote nodes
 def run(nodes, command):
     for node in nodes:
-        os.popen('ssh -i {} {}@{} \'{}\''.format(keyfile, username, node, command))
+        os.popen('ssh -i {} {}@{} \'{} &> /dev/null &\''.format(keyfile, username, node, command))
         print('started on node ' + node)
         print()
 

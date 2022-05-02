@@ -46,9 +46,10 @@ def random_test(server, freq, size=5000):
 
 
 if __name__ == '__main__':
-    # run with different parameters
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        # for rep in replicas:
-        #     executor.submit(random_test, rep, pageviews, 1000)
-        #     executor.submit(serial_test, rep, pageviews, 0)
-        serial_test(replicas[0], pageviews, 0)
+        for rep in replicas:
+            executor.submit(serial_test, rep, pageviews, 0)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        for rep in replicas:
+            executor.submit(random_test, rep, pageviews, 100)

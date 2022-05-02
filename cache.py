@@ -8,7 +8,7 @@ import heapq
 MEM_MIN_FREQ = 1650
 
 # limit the disk usage to store content of pages
-DISK_LIMIT = 20 * 1024 * 1024
+DISK_LIMIT = 20 * 1000 * 1000
 
 class Cache(object):
     """
