@@ -1,61 +1,47 @@
 #!python3
-
 import sys
-import socket
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from functools import lru_cache
 import requests
-from functools import lru_cache
+import requests.utils
+from cache import Cache, MEM_MIN_FREQ, DISK_LIMIT
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-port = int(sys.argv[2])
-origin = 'cs5700cdnorigin.ccs.neu.edu'
-# binding to all ip address.
-host = '0.0.0.0'
-
-cache = dict()
-
-
-def get_page_from_origin(url):
-    print("getting page from origin...")
-    response = requests.get(url)
-    return response
-
-#currently using python lib simulate lru cache.
-#@lru_cache(maxsize = 20 * 1024)
-def get_page(url):
-    print("looking up in cache...")
-    if url not in cache:
-        cache[url] = get_page_from_origin(url)
-    return cache[url]
-
+PORT = int(sys.argv[1])
+ORIGIN = sys.argv[2]
 
 class CDNHTTP(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/grading/beacon' :
+    lfucache = Cache(mem_min_freq=MEM_MIN_FREQ, disk_threshold=DISK_LIMIT)
+
+    def do_GET(self, cache=lfucache):
+        if self.path == '/grading/beacon':
             self.send_response(204)
-            self.send_header("Content-type", "text/html")
+            self.send_header("Content-Type", "text/html")
             self.end_headers()
             return
+
+        page = requests.utils.unquote(self.path[1:])
+        content = cache.get(page)
+        if len(content) == 0:
+            print('downloading from origin...')
+
+            resp = requests.get('http://{}:8080/{}'.format(ORIGIN, page))
+            if resp.status_code == 404:
+                self.send_error(404, 'Page not Found')
+                return
+
+            content = resp.content
+            cache.put(page, content)
+
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        self.send_header("Content-Type", "text/html")
         self.end_headers()
-
-        url = origin + ":" + str(port) + self.path
-        page = get_page(url)
-        self.wfile.write(page)
-
-    def terminateConnection(self):
-        self.server.shutdown()
-        print('HTTP Server shutdown')
-
-
-def main():
-    server_address = ('0.0.0.0', port)
-    server = HTTPServer(server_address, CDNHTTP)
-    print('Serving on port %s' % port)
-    server.serve_forever()
-    server.shutdown()
+        self.wfile.write(content)
 
 
 if __name__ == '__main__':
-    main()
+    server = HTTPServer(('0.0.0.0', PORT), CDNHTTP)
+    print('Serving on port %s' % PORT)
+
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()

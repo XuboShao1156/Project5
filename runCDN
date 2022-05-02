@@ -25,15 +25,18 @@ def run(nodes, command):
     for node in nodes:
         os.popen('ssh -i {} {}@{} \'{}\''.format(keyfile, username, node, command))
         print('started on node ' + node)
+        print()
 
 
 # run dns
 print('start dns servers...')
 with open('./dns_nodes', 'r') as f:
-    run(f.readlines(), 'python3 ./dnsserver {} {}'.format(port, name))
+    nodes = [line.strip() for line in f.readlines() if len(line.strip()) != 0]
+    run(nodes, 'python3 ./dnsserver {} {}'.format(port, name))
 
 
 # run http
-# print('start http servers...')
-# with open('./replica_server', 'r') as f:
-#     run(f.readlines(), 'python3 ~/p5/httpserver -p {} -o {}'.format(port, origin))
+print('start http servers...')
+with open('./replica_server', 'r') as f:
+    nodes = [line.strip() for line in f.readlines() if len(line.strip()) != 0]
+    run(nodes, 'python3 ./httpserver {} {}'.format(port, origin))

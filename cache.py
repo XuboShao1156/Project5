@@ -2,26 +2,37 @@ import csv
 import os
 import heapq
 
+# the content of pages with higher frequency will be stored in memory or will be stored on disk
 MEM_MIN_FREQ = 5000
 
-# cache for html pages
-class Cache(object):
-    def __init__(self, mem_min_freq=MEM_MIN_FREQ, disk_threshold=18_000_000, disk_folder='./pages',
-                 freq_file='pageviews.csv'):
-        self.mem_min_freq = mem_min_freq  # minimal frequency requirement to store the page in memory
+# limit the disk usage to store content of pages
+DISK_LIMIT = 20 * 1024 * 1024
 
-        self.freq = dict()  # page -> frequency
-        with open(freq_file) as f:
+class Cache(object):
+    """
+    This class implements a two-layer cache for HTML pages:
+    1. memory layer: for pages will higher frequency than mem_min_freq, the content will be stored in memory
+    2. disk layer: for pages with lower frequency than mem_min_freq, the content will be stored in storage and limited
+    by disk_threshold. To avoid exceeding this threshold and maximize the performance, we will replace the least
+    frequent page with the new page if it has a higher frequency.
+    """
+    def __init__(self, mem_min_freq=MEM_MIN_FREQ, disk_threshold=DISK_LIMIT,
+                 disk_folder='./pages', freq_file='pageviews.csv'):
+        self.mem_min_freq = mem_min_freq
+        # minimal frequency requirement to store the page in memory
+
+        self.freq = dict()  # path -> frequency
+        with open(freq_file, encoding='utf-8') as f:
             for row in csv.reader(f):
                 self.freq[row[0]] = int(row[1])
+        # os.remove(freq_file)
+        self.mem_cache = dict()  # path -> content in bytes
 
-        self.mem_cache = dict()     # page -> content in bytes
-
-        self.disk_cache = dict()    # page -> len(content)
-        self.disk_queue = []        # queue of pages prioritized by frequency
+        self.disk_cache = dict()  # path -> len(content)
+        self.disk_queue = []  # queue of pages prioritized by frequency
 
         self.disk_usage = 0
-        self.disk_threshold = disk_threshold    # maximum disk usage
+        self.disk_threshold = disk_threshold  # maximum disk usage
 
         self.disk_folder = disk_folder  # folder to store pages
         if os.path.exists(disk_folder):
@@ -33,7 +44,8 @@ class Cache(object):
             self.mem_cache[page] = content
         else:  # store page in disk
             # if disk is full and new page has a higher frequency, pop the least frequent item out
-            while self.disk_usage + len(content) >= self.disk_threshold and self.freq[page] > self.freq[self.disk_queue[0][1]]:
+            while self.disk_usage + len(content) >= self.disk_threshold \
+                    and self.freq[page] > self.freq[self.disk_queue[0][1]]:
                 victim_page = heapq.heappop(self.disk_queue)
                 os.remove(self.disk_folder + '/' + victim_page[1])
                 self.disk_usage -= self.disk_cache[victim_page[1]]
