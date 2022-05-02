@@ -21,16 +21,22 @@ keyfile = args.i
 
 
 # upload local files to the directory of remote nodes
-def upload(files, nodes, directory):
+def upload(files, nodes):
     for node in nodes:
-        os.popen('ssh -i {} {}@{} \'rm -rf {}\''.format(keyfile, username, node, directory)).read()
-        os.popen('ssh -i {} {}@{} \'mkdir {}\''.format(keyfile, username, node, directory)).read()
-        os.popen('scp -i {} {} {}@{}:{}\\'.format(keyfile, ' '.join(files), username, node, directory)).read()
+        node = node.strip()
+        print(os.popen('scp -i {} {} {}@{}:~/\\'.format(keyfile, ' '.join(files), username, node)).read())
+
+# run command on remote nodes
+def run(nodes, command):
+    for node in nodes:
+        print(os.popen('ssh -i {} {}@{} \'{}\''.format(keyfile, username, node, command)).read())
 
 
 # upload dns
 with open('./dns_nodes', 'r') as f:
-    upload(['./__init__.py', './dnsserver', './main.py'], f.readlines(), 'p5')
+    nodes = f.readlines()
+    run(nodes, 'rm -rf *')
+    upload(['./__init__.py', './dnsserver', './mapping.py', './geo.py', './geo_db.csv'], nodes)
 
 # upload http
 with open('./replica_server', 'r') as f:
