@@ -25,6 +25,8 @@ keyfile = args.i
 def upload(nodes, files):
     for node in nodes:
         print(os.popen('scp -i {} {} {}@{}:~/\\'.format(keyfile, ' '.join(files), username, node)).read())
+        print('uploaded on {}'.format(node))
+        print()
 
 # run command on remote nodes
 def run(nodes, command):
