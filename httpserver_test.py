@@ -5,15 +5,15 @@ import time
 import requests
 
 replicas = [
-    'p5-http-a.5700.network',
-    'p5-http-b.5700.network',
-    'p5-http-c.5700.network',
-    'p5-http-d.5700.network',
-    'p5-http-e.5700.network',
-    'p5-http-f.5700.network',
-    'p5-http-g.5700.network'
+    # 'p5-http-a.5700.network',
+    # 'p5-http-b.5700.network',
+    # 'p5-http-c.5700.network',
+    # 'p5-http-d.5700.network',
+    # 'p5-http-e.5700.network',
+    # 'p5-http-f.5700.network',
+    # 'p5-http-g.5700.network',
+    'localhost'
 ]
-# replica = 'localhost'
 
 pageviews = []
 with open('pageviews.csv') as f:
@@ -50,4 +50,4 @@ if __name__ == '__main__':
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         for rep in replicas:
             executor.submit(random_test, rep, pageviews, 1)
-            # executor.submit(serial_test, rep, pageviews, 0)
+            # executor.submit(serial_test, rep, pageviews, 1600)

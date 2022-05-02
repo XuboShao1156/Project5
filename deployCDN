@@ -24,14 +24,19 @@ keyfile = args.i
 # upload local files to the directory of remote nodes
 def upload(nodes, files):
     for node in nodes:
-        print(os.popen('scp -i {} {} {}@{}:~/\\'.format(keyfile, ' '.join(files), username, node)).read())
-        print('uploaded on {}'.format(node))
+        out = os.popen('scp -i {} {} {}@{}:~/\\'.format(keyfile, ' '.join(files), username, node)).read()
+        if out != '':
+            print(out)
+        else:
+            print('uploaded on {}'.format(node))
         print()
 
 # run command on remote nodes
 def run(nodes, command):
     for node in nodes:
-        print(os.popen('ssh -i {} {}@{} \'{}\''.format(keyfile, username, node, command)).read())
+        out = os.popen('ssh -i {} {}@{} \'{}\''.format(keyfile, username, node, command)).read()
+        if out != '':
+            print(out)
 
 
 # upload dns

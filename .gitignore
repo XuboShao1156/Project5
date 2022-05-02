@@ -4,6 +4,4 @@ venv/*
 db/*
 geo-service/*
 pages/
-size.log
-statistic.py
 nohup.out

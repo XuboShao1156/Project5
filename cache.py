@@ -2,8 +2,10 @@ import csv
 import os
 import heapq
 
-# the content of pages with higher frequency will be stored in memory or will be stored on disk
-MEM_MIN_FREQ = 5000
+# The content of pages with higher frequency than MEM_MIN_FREQ will be compressed by gzip and stored in memory.
+# According to our analysis script (see statistics.py) and measurements (see size.log),
+# the size of compressed content of pages with higher frequency than 1650 is 19.57MB.
+MEM_MIN_FREQ = 1650
 
 # limit the disk usage to store content of pages
 DISK_LIMIT = 20 * 1024 * 1024
@@ -39,9 +41,12 @@ class Cache(object):
             os.popen('rm -rf ' + disk_folder).read()
         os.mkdir(disk_folder)
 
+        self.mem_size = 0
+
     def put(self, page: str, content: bytes) -> None:
         if self.freq[page] > self.mem_min_freq:  # store page in memory
             self.mem_cache[page] = content
+            self.mem_size += len(content)
         else:  # store page in disk
             # if disk is full and new page has a higher frequency, pop the least frequent item out
             while self.disk_usage + len(content) >= self.disk_threshold \
@@ -60,17 +65,18 @@ class Cache(object):
                 self.disk_cache[page] = len(content)
 
     def get(self, page) -> bytes:
-        if page in self.mem_cache:
+        if page in self.mem_cache: # check in memory
             print('fetch page {} from memory...'.format(page))
             return self.mem_cache[page]
-        elif page in self.disk_cache:
+        elif page in self.disk_cache: # check in disk
             print('fetch page {} from disk...'.format(page))
             with open(self.disk_folder + '/' + page, 'rb') as f:
                 return f.read()
-        else:
+        else: # page not cached
             return b''
 
 
+# test
 if __name__ == '__main__':
     cache = Cache(mem_min_freq=50_000, disk_threshold=27)
 
