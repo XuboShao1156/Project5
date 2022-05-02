@@ -5,14 +5,14 @@ import time
 import requests
 
 replicas = [
-    # 'p5-http-a.5700.network',
+    'p5-http-a.5700.network',
     # 'p5-http-b.5700.network',
     # 'p5-http-c.5700.network',
     # 'p5-http-d.5700.network',
     # 'p5-http-e.5700.network',
     # 'p5-http-f.5700.network',
     # 'p5-http-g.5700.network',
-    'localhost'
+    # 'localhost'
 ]
 
 pageviews = []
@@ -48,6 +48,7 @@ def random_test(server, freq, size=5000):
 if __name__ == '__main__':
     # run with different parameters
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        for rep in replicas:
-            executor.submit(random_test, rep, pageviews, 1)
-            # executor.submit(serial_test, rep, pageviews, 1600)
+        # for rep in replicas:
+        #     executor.submit(random_test, rep, pageviews, 1000)
+        #     executor.submit(serial_test, rep, pageviews, 0)
+        serial_test(replicas[0], pageviews, 0)
