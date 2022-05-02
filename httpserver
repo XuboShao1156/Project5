@@ -1,21 +1,16 @@
 #!python3
-
 import sys
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import requests
-import psutil
 import csv
 import os
 import heapq
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 DISK_LIMIT = 20 * 1024 * 1024
-MEM_MIN_FREQ = 5000
+MEM_MIN_FREQ = 5500
 
-PORT = int(sys.argv[2])
-ORIGIN = 'cs5700cdnorigin.ccs.neu.edu'
-
-mem = psutil.virtual_memory()
-
+PORT = int(sys.argv[1])
+ORIGIN = sys.argv[2]
 
 # cache for html pages
 class Cache(object):
@@ -28,7 +23,7 @@ class Cache(object):
         with open(freq_file) as f:
             for row in csv.reader(f):
                 self.freq[row[0]] = int(row[1])
-        os.remove('./pageview.csv')
+        # os.remove(freq_file)
         self.mem_cache = dict()  # path -> content in bytes
 
         self.disk_cache = dict()  # path -> len(content)
@@ -72,7 +67,7 @@ class Cache(object):
             return b''
 
 class CDNHTTP(BaseHTTPRequestHandler):
-    lfucache = Cache(mem_min_freq=50_000, disk_threshold=DISK_LIMIT)
+    lfucache = Cache(mem_min_freq=MEM_MIN_FREQ, disk_threshold=DISK_LIMIT)
 
     def do_GET(self, cache=lfucache):
         if self.path == '/grading/beacon':
@@ -86,7 +81,7 @@ class CDNHTTP(BaseHTTPRequestHandler):
         if len(content) == 0:
             print('downloading from origin...')
 
-            resp = requests.get('{}:{}/{}'.format(ORIGIN, PORT, page))
+            resp = requests.get('http://{}:8080/{}'.format(ORIGIN, page))
             if resp.status_code == 404:
                 self.send_error(404, 'Page not Found')
                 return
@@ -94,21 +89,16 @@ class CDNHTTP(BaseHTTPRequestHandler):
             content = resp.content
             cache.put(page, content)
 
+        self.send_response(200)
+        self.end_headers()
         self.wfile.write(content)
-
-    # shutdown http server.
-    def terminateConnection(self):
-        self.server.shutdown()
-        print('HTTP Server shutdown')
-
-
-def main():
-    server_address = ('0.0.0.0', PORT)
-    server = HTTPServer(server_address, CDNHTTP)
-    print('Serving on port %s' % PORT)
-    server.serve_forever()
-    server.shutdown()
 
 
 if __name__ == '__main__':
-    main()
+    server = HTTPServer(('0.0.0.0', PORT), CDNHTTP)
+    print('Serving on port %s' % PORT)
+
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()

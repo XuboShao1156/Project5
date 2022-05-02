@@ -5,6 +5,7 @@ import sys
 import os
 
 # parse args
+# ./deployCDN -p 40007 -o cs5700cdnorigin.ccs.neu.edu -n <name> -u content_destroy_ninjas -i <keyfile>
 parser = argparse.ArgumentParser(description='Deploy CDN.')
 parser.add_argument('-p')
 parser.add_argument('-o')
@@ -21,9 +22,8 @@ keyfile = args.i
 
 
 # upload local files to the directory of remote nodes
-def upload(files, nodes):
+def upload(nodes, files):
     for node in nodes:
-        node = node.strip()
         print(os.popen('scp -i {} {} {}@{}:~/\\'.format(keyfile, ' '.join(files), username, node)).read())
 
 # run command on remote nodes
@@ -34,12 +34,13 @@ def run(nodes, command):
 
 # upload dns
 with open('./dns_nodes', 'r') as f:
-    nodes = f.readlines()
+    nodes = [line for line in f.readlines() if len(line.strip()) != 0]
     run(nodes, 'rm -rf *')
-    upload(['./__init__.py', './dnsserver', './mapping.py', './geo.py', './geo_db.csv'], nodes)
+    upload(nodes, ['./__init__.py', './dnsserver', './mapping.py', './geo.py', './geo_db.csv'])
 
 # upload http
 with open('./replica_server', 'r') as f:
-    upload(['./httpserver', './pageview.csv'], f.readlines(), 'p5')
+    nodes = [line.strip() for line in f.readlines() if len(line) != 0]
+    run(nodes, 'rm -rf *')
+    upload(nodes, ['./httpserver', './pageviews.csv'])
 
-# ./deployCDN -p 40007 -o cs5700cdnorigin.ccs.neu.edu -n <name> -u content_destroy_ninjas -i <keyfile>

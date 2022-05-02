@@ -34,6 +34,6 @@ with open('./dns_nodes', 'r') as f:
 
 
 # run http
-# print('start http servers...')
-# with open('./replica_server', 'r') as f:
-#     run(f.readlines(), 'python3 ~/p5/httpserver -p {} -o {}'.format(port, origin))
+print('start http servers...')
+with open('./replica_server', 'r') as f:
+    run(f.readlines(), 'python3 ./httpserver {} {}'.format(port, origin))
