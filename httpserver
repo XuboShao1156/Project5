@@ -156,16 +156,14 @@ class Cache(object):
 def get_page(path, lfucache):
     print("looking up in cache...")
 
-    if lfucache.get(path) == -1:
-        response = get_page_from_origin(path)
-        if response.status_code == 404:
-            return response
-        else:
-            lfucache.put(path, response)
-        return response
-    else:
-        response = lfucache.get(path)
-        return response
+    resp = lfucache.get(path)
+    if len(resp) == 0:
+        resp = get_page_from_origin(path)
+        if resp.status_code == 404:
+            return resp
+        lfucache.put(path, resp)
+        
+    return resp
 
 
 def get_page_from_origin(path):
