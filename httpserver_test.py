@@ -1,6 +1,7 @@
 import concurrent.futures
 import csv
 import random
+import time
 import requests
 
 replicas = [
@@ -22,15 +23,18 @@ with open('pageviews.csv') as f:
 def test(server, session, idx, page):
     resp = session.get('http://{}:40007/{}'.format(server, page[0]))
     if resp.status_code != 200:
-        print('\tERROR for {} on {}!'.format(page, node))
+        print('ERROR for {} on {}!'.format(page, server))
     print('{}. code {} for {} on {}.'.format(idx, resp.status_code, page, server))
 
 
 def serial_test(server, freq, min_freq=0):
+    start = time.time()
     session = requests.session()
     for idx, page in enumerate(freq):
-        # print('{}.testing {} on {}...'.format(idx, page, server))
-        test(server, session, idx, page)
+        if page[1] < min_freq:
+            break
+        test(server, session, idx + 1, page)
+    print('finished serial test on replica {} in {}'.format(server, time.time() - start))
 
 
 def random_test(server, freq, size=5000):
@@ -45,4 +49,5 @@ if __name__ == '__main__':
     # run with different parameters
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         for rep in replicas:
-            executor.submit(random_test, rep, pageviews, 5)
+            executor.submit(random_test, rep, pageviews, 1)
+            # executor.submit(serial_test, rep, pageviews, 0)
