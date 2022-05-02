@@ -30,10 +30,10 @@ def run(nodes, command):
 # run dns
 print('start dns servers...')
 with open('./dns_nodes', 'r') as f:
-    run(f.readlines(), 'python3 ~/p5/dnsserver {} {}'.format(port, name))
+    run(f.readlines(), 'python3 ./dnsserver {} {}'.format(port, name))
 
 
 # run http
-print('start http servers...')
-with open('./replica_server', 'r') as f:
-    run(f.readlines(), 'python3 ~/p5/httpserver -p {} -o {}'.format(port, origin))
+# print('start http servers...')
+# with open('./replica_server', 'r') as f:
+#     run(f.readlines(), 'python3 ~/p5/httpserver -p {} -o {}'.format(port, origin))

@@ -3,3 +3,6 @@ venv/*
 .idea/*
 db/*
 geo-service/*
+pages/
+size.log
+statistic.py
