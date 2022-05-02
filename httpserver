@@ -1,39 +1,26 @@
 #!python3
 
 import sys
-import socket
-import collections
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import pandas as pd
 import requests
-from pympler import asizeof
 import psutil
-import heapq
-
-pageview = pd.read_csv("./pageviews.csv")
-
-memoryLimit = 20 * 1024 * 1024
-diskSizeLimit = 20 * 1024 * 1024
-# Total 20MB Disk space across all folders.
-# RSS limited to 20MB.
-port = int(sys.argv[2])
-origin = 'cs5700cdnorigin.ccs.neu.edu'
-# binding to all ip address.
-host = '0.0.0.0'
-mem = psutil.virtual_memory()
-
-
 import csv
 import os
 import heapq
 
+DISK_LIMIT = 20 * 1024 * 1024
 MEM_MIN_FREQ = 5000
+
+PORT = int(sys.argv[2])
+ORIGIN = 'cs5700cdnorigin.ccs.neu.edu'
+
+mem = psutil.virtual_memory()
 
 
 # cache for html pages
 class Cache(object):
-    def __init__(self, mem_min_freq=MEM_MIN_FREQ, disk_threshold=18_000_000, disk_folder='./pages',
-                 freq_file='pageviews.csv'):
+    def __init__(self, mem_min_freq=MEM_MIN_FREQ, disk_threshold=18_000_000,
+                 disk_folder='./pages', freq_file='pageviews.csv'):
         self.mem_min_freq = mem_min_freq
         # minimal frequency requirement to store the page in memory
 
@@ -56,12 +43,12 @@ class Cache(object):
         os.mkdir(disk_folder)
 
     def put(self, page: str, content: bytes) -> None:
-        if self.freq[page] > self.mem_min_freq and mem.used < memoryLimit:  # store page in memory
+        if self.freq[page] > self.mem_min_freq:  # store page in memory
             self.mem_cache[page] = content
         else:  # store page in disk
             # if disk is full and new page has a higher frequency, pop the least frequent item out
-            while self.disk_usage + len(content) >= self.disk_threshold and self.freq[page] > self.freq[
-                self.disk_queue[0][1]]:
+            while self.disk_usage + len(content) >= self.disk_threshold \
+                    and self.freq[page] > self.freq[self.disk_queue[0][1]]:
                 victim_page = heapq.heappop(self.disk_queue)
                 os.remove(self.disk_folder + '/' + victim_page[1])
                 self.disk_usage -= self.disk_cache[victim_page[1]]
@@ -84,115 +71,30 @@ class Cache(object):
         else:
             return b''
 
-
-# class LFUCache(object):
-#
-#     def __init__(self, capacity):
-#         self.capacity = capacity
-#
-#         # self.time = 0
-#         self.map = {}  # key to value
-#         self.freq_time = {}  # key to freq
-#         self.priority_queue = []  # (freq key), only updated when new key is added
-#
-#     def get(self, path):
-#         # self.time += 1
-#
-#         if path in self.map:
-#             freq = self.freq_time[path]
-#             self.freq_time[path] = freq
-#
-#             return self.map[path]
-#
-#         return -1
-#
-#     def put(self, path, page):
-#         if self.capacity <= 0:
-#             return
-#
-#         var = pageview.loc[pageview['path'] == path]
-#
-#         if var.empty:
-#             print('no such page')
-#             freq = 0
-#         else:
-#             freq = int(var['hits'])
-#
-#         # self.time += 1
-#         if path not in self.map:
-#             if len(page) > self.capacity:
-#                 return
-#             while (len(self.map) + len(page)) >= self.capacity:  # must remove least frequent from cache
-#
-#                 while self.priority_queue:
-#
-#                     qfreq, qkey = heapq.heappop(self.priority_queue)
-#                     if qfreq < freq:
-#                         self.map.pop(qkey)
-#                         # self.freq_time.pop(qkey)
-#                         self.freq_time[path] = freq
-#                         heapq.heappush(self.priority_queue, (freq, path))
-#                     else:
-#                         f = self.freq_time[qkey]
-#                         heapq.heappush(self.priority_queue, (qfreq, qkey))
-#                     # self.update.remove(k)
-#
-#                 # remove (least frequent, oldest)
-#                 # _, _, k = heapq.heappop(self.priority_queue)
-#                 # self.map.pop(k)
-#                 # self.freq_time.pop(k)
-#
-#             self.freq_time[path] = freq
-#             heapq.heappush(self.priority_queue, (freq, path))
-#
-#         else:
-#             freq, time = self.freq_time[path]
-#             self.freq_time[path] = freq
-#             # self.update.add(path)
-#
-#         self.map[path] = page
-
-
-def get_page(path, lfucache):
-    print("looking up in cache...")
-
-    resp = lfucache.get(path)
-    if len(resp) == 0:
-        resp = get_page_from_origin(path)
-        if resp.status_code == 404:
-            return resp
-        lfucache.put(path, resp)
-        
-    return resp
-
-
-def get_page_from_origin(path):
-    print("getting page from origin...")
-    req = origin + ":" + str(port) + path
-    response = requests.get(req)
-
-    return response
-
-
 class CDNHTTP(BaseHTTPRequestHandler):
-    lfucache = Cache(mem_min_freq=50_000, disk_threshold=27)
+    lfucache = Cache(mem_min_freq=50_000, disk_threshold=DISK_LIMIT)
 
-    def do_GET(self, Scache=lfucache):
+    def do_GET(self, cache=lfucache):
         if self.path == '/grading/beacon':
             self.send_response(204)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             return
 
-        page = get_page(self.path, Scache)
-        if page.status_code == 404:
-            self.send_error(404, 'Page not Found')
-        else:
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
+        page = self.path[1:]
+        content = cache.get(page)
+        if len(content) == 0:
+            print('downloading from origin...')
 
-        self.wfile.write(page)
+            resp = requests.get('{}:{}/{}'.format(ORIGIN, PORT, page))
+            if resp.status_code == 404:
+                self.send_error(404, 'Page not Found')
+                return
+
+            content = resp.content
+            cache.put(page, content)
+
+        self.wfile.write(content)
 
     # shutdown http server.
     def terminateConnection(self):
@@ -201,9 +103,9 @@ class CDNHTTP(BaseHTTPRequestHandler):
 
 
 def main():
-    server_address = ('0.0.0.0', port)
+    server_address = ('0.0.0.0', PORT)
     server = HTTPServer(server_address, CDNHTTP)
-    print('Serving on port %s' % port)
+    print('Serving on port %s' % PORT)
     server.serve_forever()
     server.shutdown()
 
