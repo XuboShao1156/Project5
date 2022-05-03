@@ -73,8 +73,7 @@ async def _query_internal_api(ip) -> (str, int, int):
 
 
 async def _await_response(session, url, auth):
-    loop = asyncio.get_event_loop()
-    resp = await loop.run_in_executor(None, _try_get, session, url, auth)
+    resp = await asyncio.get_event_loop().run_in_executor(None, _try_get, session, url, auth)
     return resp
 
 
