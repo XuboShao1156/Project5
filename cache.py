@@ -56,7 +56,7 @@ class Cache(object):
         if origin == '':
             return
 
-        start = time.time()
+        # start = time.time()
 
         session = requests.session()
         for p in pages:

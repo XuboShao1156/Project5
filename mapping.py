@@ -19,14 +19,14 @@ def map_replica(ip) -> str:
         # print('use cache...')
         return cache[ip]
 
-    start = time.time()
+    # start = time.time()
     lat, lon = query(ip)
     # print('ip geo query time: ' + str(time.time() - start))
     if lat is None or lon is None:
         # print('ip geo location not found, use default.')
         return replicas[0][1]
 
-    start = time.time()
+    # start = time.time()
     best = 0
     min_dist = 1_000_000_000
     for idx, rep in enumerate(replicas):

@@ -18,13 +18,12 @@ class Server(socketserver.BaseRequestHandler):
         # print('time: ' + time.strftime("%H:%M:%S", time.localtime()))
         # print("request from: " + self.client_address[0])
 
-        start = time.time()
+        # start = time.time()
         ans = query.reply()
         for q in query.questions:
             if q.qname == NAME:
                 # map a replica server
-                replica = map_replica(self.client_address[0])
-                ans.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 60, A(replica)))
+                ans.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 60, A(map_replica(self.client_address[0]))))
                 # print('answer: ' + replica)
 
         if len(ans.rr) != 0:

@@ -2,7 +2,6 @@
 
 import gzip
 import sys
-import time
 import requests.utils
 from cache import Cache, MEM_MIN_FREQ, DISK_LIMIT
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -26,7 +25,7 @@ class CdnHttp(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        start = time.time()
+        # start = time.time()
 
         # retrieve page
         page = requests.utils.unquote(self.path[1:])
