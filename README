@@ -1,12 +1,9 @@
 # High Level Approach
 ## DNS
 To determine the location of ip address,
-our DNS server uses geo-location data from both ASes (AWS, Linode) and [GeoLite](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data?lang=en),
+our DNS server uses local geo-location databases from both ASes (AWS, Linode) and [GeoLite](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data?lang=en),
 then we use [Haversine formula](https://en.wikipedia.org/wiki/Haversine_formula) to compute the nearest replica server.
 To improve performance, we also cached the computed mapping from the client ip to the target replica ip for later requests.
-We didn't use scamper since it is far too slow than querying a local database or even a web service,
-though it may improve the latency later by replacing the target replica for a client ip stored in cache,
-but this rarely happens in our set-up since our replicas servers are scatter so far away and the distance would dominate the latency.
 
 ## HTTP Server
 The HTTP server takes in a HTTP request from clients and response with a corresponding page retrieved from origin server.
@@ -32,8 +29,6 @@ We design it as a two-layer cache:
     To limit the disk usage under 20MB and maximum the performance, these pages are prioritized by their frequency according to 'pageviews.csv'.
     If adding a new page will cause the disk usage to exceed 20MB, we will first delete few least-frequent pages before adding it.
     Based on our investigation, if using gzip, we can eventually cache all pages with higher frequency than 993.
-3. We didn't implement the page exchange between the two layers since we found the performance difference between the two is rather trivial comparing with network latency.
-
 Our investigation for these pages is based on 'size.log' which is produced by 'statistics.py'.
 The 'size.log' includes information of most frequent pages with a total size lower than 50MB.
 
@@ -51,3 +46,32 @@ We eventually decide to only use geo-database for ASes like AWS.
     At the beginning, if the server is started by the runCDN which is using remote ssh command, it fails on our stress test.
     The problem is that the std output of the program somehow blocks it.
     We spent a lot of time troubleshooting and eventually solved it by redirecting the program's output to '/dev/null'.
+
+
+# Report
+## Design Decision
+### Local Geo-database:
+    We use local geo-databases for performance.
+    We didn't use scamper since it is far too slow than querying a local database or even a web service,
+    if the replica is another other half of Earth, the RTT would be very large.
+    Though it may improve the latency later by replacing the target replica for a client ip stored in cache,
+    but this rarely happens in our set-up since our replicas servers are scatter so far away and the distance would dominate the latency.
+### Two-layer Cache:
+    Two layer cache is used to maximum the usage of assigned memory and disk space since local query is far more fast than retrieve from origin.
+    For the same purpose, we also used gzip to compress each page before storing them.
+    We didn't implement the page exchange between the two layers since it's hard to implement it right and
+    considering the performance is dominated by network latency, it doesn't worth adding that complexity here.
+
+## Evaluation
+### For 'dnsserver', we use dig command from our own computer or nodes on Khoury, cloud to evaluate the correctness and effectiveness.
+### For 'httpserver', we write 'httpserver_tests.py' which includes functional test, performance test, and stress test.
+    To better understand our programs behaviour on performance, we embedded codes to output a great mount of information for us to analyze.
+### To maximize the usage of cache, as mentioned earlier on the implementation of HTTP section,
+    we write a script 'statistics.py' to produce information for the most frequent pages and decide what pages to store in memory and which in disk.
+
+## Potential improvements
+### Geo-database: we will try to find a better to compress the general geo-database, possibly merge ip subnets in a near region.
+### Cache: we will try to implement the page exchange between memory and disk to further improve performance.
+### Server Performance: considering our servers whether DNS server or HTTP server,
+    are both IO-Bounded since they both have to query external resources under certain conditions,
+    We believe making such operations asynchronous would improve the performance a lot.
