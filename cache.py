@@ -1,6 +1,11 @@
+import asyncio
 import csv
+import gzip
 import os
 import heapq
+import time
+import requests
+import requests.utils
 
 # The content of pages with higher frequency than MEM_MIN_FREQ will be compressed by gzip and stored in memory.
 # According to our analysis script (see statistics.py) and measurements (see size.log),
@@ -9,6 +14,13 @@ MEM_MIN_FREQ = 1650
 
 # limit the disk usage to store content of pages
 DISK_LIMIT = 20 * 1000 * 1000
+
+async def concurrent_request(host, pages):
+    aws = []
+    for p in pages:
+        aws.append(asyncio.get_event_loop().run_in_executor(None, requests.get,
+                                                            'http://{}:8080/{}'.format(host, p)))
+    return await asyncio.gather(*aws)
 
 class Cache(object):
     """
@@ -19,15 +31,19 @@ class Cache(object):
     frequent page with the new page if it has a higher frequency.
     """
     def __init__(self, mem_min_freq=MEM_MIN_FREQ, disk_threshold=DISK_LIMIT,
-                 disk_folder='./pages', freq_file='pageviews.csv'):
-        self.mem_min_freq = mem_min_freq
+                 disk_folder='./pages', freq_file='pageviews.csv', origin='', prefetch_size=0):
         # minimal frequency requirement to store the page in memory
+        self.mem_min_freq = mem_min_freq
 
         self.freq = dict()  # path -> frequency
+        prefetch_pages = []
         with open(freq_file, encoding='utf-8') as f:
             for row in csv.reader(f):
                 self.freq[row[0]] = int(row[1])
+                if len(prefetch_pages) < prefetch_size:
+                    prefetch_pages.append(row[0])
         # os.remove(freq_file)
+
         self.mem_cache = dict()  # path -> content in bytes
 
         self.disk_cache = dict()  # path -> len(content)
@@ -42,6 +58,21 @@ class Cache(object):
         os.mkdir(disk_folder)
 
         self.mem_size = 0
+
+        self._prefetch(origin, prefetch_pages)
+
+    def _prefetch(self, origin, pages):
+        if origin == '':
+            return
+
+        start = time.time()
+
+        for resp in asyncio.run(concurrent_request(origin, pages)):
+            if resp.status_code / 100 != 2:
+                    continue
+            self.put(requests.utils.unquote(resp.request.path_url[1:]), gzip.compress(resp.content))
+
+        print('prefetch costs: {}'.format(time.time() - start))
 
     def put(self, page: str, content: bytes) -> None:
         if self.freq[page] > self.mem_min_freq:  # store page in memory
