@@ -8,7 +8,7 @@ import requests
 def query(ip) -> (int, int):
     lat, lon = _query_by_db(ip)
     if lat is None or lon is None:
-        ret, lat, lon = asyncio.run(_query_api())
+        ret, lat, lon = asyncio.run(_query_api(ip))
         if ret == 'failed':
             return None, None
         print(ret)
@@ -77,17 +77,19 @@ async def _await_response(session, url, auth):
     return resp
 
 
-async def _query_api():
-    tasks = [asyncio.create_task(_query_internal_api('45.33.89.90')),
-             asyncio.create_task(_query_external_api('45.33.89.90'))]
-    for coro in asyncio.as_completed(tasks):
+async def _query_api(ip):
+    print('query api...')
+    for coro in asyncio.as_completed([asyncio.create_task(_query_internal_api(ip)),
+                                      asyncio.create_task(_query_external_api(ip))]):
         result = await coro
         if result[0] == 'failed':
             continue
         return result
 
+    return 'failed', 0, 0
+
 
 if __name__ == '__main__':
     start = time.time()
-    print('query by db: ' + str(_query_by_db('54.251.196.47')))
+    print(query('72.74.225.130'))
     print(time.time() - start)

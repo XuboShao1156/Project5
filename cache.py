@@ -102,28 +102,35 @@ class Cache(object):
 
 # test
 if __name__ == '__main__':
-    cache = Cache(mem_min_freq=50_000, disk_threshold=27)
+    cache = Cache(mem_min_freq=MEM_MIN_FREQ, disk_threshold=50, origin='cs5700cdnorigin.ccs.neu.edu', prefetch_size=10)
 
-    print(cache.get('Main_Page'))
+    cache.get('Main_Page')
     cache.put('Main_Page', b'main page')
-    print(cache.get('Main_Page'))
+    assert cache.get('Main_Page') == b'main page'
 
-    print(cache.get('-'))
     cache.put('-', b'----------')
-    print(cache.get('-'))
+    assert cache.get('-') == b'----------'
 
-    print(cache.get('Patrick_Mahomes'))
     cache.put('Patrick_Mahomes', b'Patrick Mahomes')
-    print(cache.get('Patrick_Mahomes'))
+    assert cache.get('Patrick_Mahomes') == b'Patrick Mahomes'
 
-    print(cache.get('Conor_McGregor'))
     cache.put('Conor_McGregor', b'Conor McGregor')
-    print(cache.get('Conor_McGregor'))
+    assert cache.get('Conor_McGregor') == b'Conor McGregor'
 
-    print(cache.get('Aaron_Hernandez'))
     cache.put('Aaron_Hernandez', b'Aaron_Hernandez')
-    print(cache.get('Aaron_Hernandez'))
+    assert cache.get('Aaron_Hernandez') == b'Aaron_Hernandez'
 
-    print(cache.get('Coronavirus'))
     cache.put('Coronavirus', b'Coronavirus')
-    print(cache.get('Coronavirus'))
+    assert cache.get('Coronavirus') == b'Coronavirus'
+
+    cache.put('Chief_Justice_of_the_United_States', b'Chief_Justice_of_the_United_States')
+    assert cache.get('Chief_Justice_of_the_United_States') == b'Chief_Justice_of_the_United_States'
+
+    cache.put('Mehcad_Brooks', b'Mehcad_Brooks')
+    assert cache.get('Mehcad_Brooks') == b'Mehcad_Brooks'
+
+    cache.put('Mikhail_Mishustin', b'Mehcad_Brooks')
+    assert cache.get('Mikhail_Mishustin') == b'Mehcad_Brooks'
+
+    assert cache.get('EMPTY') == b''
+

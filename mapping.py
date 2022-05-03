@@ -20,10 +20,10 @@ def map_replica(ip) -> str:
 
     start = time.time()
     lat, lon = query(ip)
-    print('ip geo query: ' + str(time.time() - start))
+    print('ip geo query time: ' + str(time.time() - start))
     if lat is None or lon is None:
         print('ip geo location not found, use default.')
-        return replicas[0][0]
+        return replicas[0][1]
 
     start = time.time()
     best = 0
@@ -33,7 +33,7 @@ def map_replica(ip) -> str:
         if dist < min_dist:
             min_dist = dist
             best = idx
-    print('compute nearest replica: ' + str(time.time() - start))
+    print('compute nearest replica time: ' + str(time.time() - start))
 
     cache[ip] = replicas[best][1]
     return cache[ip]
@@ -52,7 +52,7 @@ def _distance(lat1, lon1, lat2, lon2) -> float:
     return 6373 * c
 
 
-def _query_replicas():
+def _query_replicas_ip():
     servers = []
     with open('replica_server', 'r') as f:
         for host in f.readlines():
@@ -63,4 +63,13 @@ def _query_replicas():
 
 if __name__ == '__main__':
     print(map_replica('54.215.100.111'))
+    print()
+    print(map_replica('0.0.0.0'))
+    print()
+    print(map_replica('1.1.1.1'))
+    print()
+    print(map_replica('8.8.8.8'))
+    print()
+    print(map_replica('8.8.8.8'))
+
 
