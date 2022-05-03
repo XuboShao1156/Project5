@@ -16,14 +16,14 @@ replicas = [['p5-http-a.5700.network', '50.116.41.109', (34, -84)],
 cache = dict()
 def map_replica(ip) -> str:
     if ip in cache:
-        print('use cache...')
+        # print('use cache...')
         return cache[ip]
 
     start = time.time()
     lat, lon = query(ip)
-    print('ip geo query time: ' + str(time.time() - start))
+    # print('ip geo query time: ' + str(time.time() - start))
     if lat is None or lon is None:
-        print('ip geo location not found, use default.')
+        # print('ip geo location not found, use default.')
         return replicas[0][1]
 
     start = time.time()
@@ -34,7 +34,7 @@ def map_replica(ip) -> str:
         if dist < min_dist:
             min_dist = dist
             best = idx
-    print('compute nearest replica time: ' + str(time.time() - start))
+    # print('compute nearest replica time: ' + str(time.time() - start))
 
     cache[ip] = replicas[best][1]
     return cache[ip]

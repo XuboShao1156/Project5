@@ -65,7 +65,7 @@ class Cache(object):
                 continue
             self.put(p, gzip.compress(resp.content))
 
-        print('prefetch costs: {}'.format(time.time() - start))
+        # print('prefetch costs: {}'.format(time.time() - start))
 
     def put(self, page: str, content: bytes) -> None:
         if self.freq[page] > self.mem_min_freq:  # store page in memory
@@ -90,10 +90,10 @@ class Cache(object):
 
     def get(self, page) -> bytes:
         if page in self.mem_cache: # check in memory
-            print('fetch page {} from memory...'.format(page))
+            # print('fetch page {} from memory...'.format(page))
             return self.mem_cache[page]
         elif page in self.disk_cache: # check in disk
-            print('fetch page {} from disk...'.format(page))
+            # print('fetch page {} from disk...'.format(page))
             with open(self.disk_folder + '/' + page, 'rb') as f:
                 return f.read()
         else: # page not cached

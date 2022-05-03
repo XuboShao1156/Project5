@@ -15,8 +15,8 @@ NAME = sys.argv[2]
 class Server(socketserver.BaseRequestHandler):
     def handle(self) -> None:
         query, conn = DNSRecord.parse(self.request[0]), self.request[1]
-        print('time: ' + time.strftime("%H:%M:%S", time.localtime()))
-        print("request from: " + self.client_address[0])
+        # print('time: ' + time.strftime("%H:%M:%S", time.localtime()))
+        # print("request from: " + self.client_address[0])
 
         start = time.time()
         ans = query.reply()
@@ -25,11 +25,11 @@ class Server(socketserver.BaseRequestHandler):
                 # map a replica server
                 replica = map_replica(self.client_address[0])
                 ans.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 60, A(replica)))
-                print('answer: ' + replica)
+                # print('answer: ' + replica)
 
         if len(ans.rr) != 0:
             conn.sendto(ans.pack(), self.client_address)
-        print('total: ' + str(time.time() - start), end='\n\n')
+        # print('total: ' + str(time.time() - start), end='\n\n')
 
 
 if __name__ == '__main__':

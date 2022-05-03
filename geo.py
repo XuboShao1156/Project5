@@ -11,7 +11,7 @@ def query(ip) -> (int, int):
         ret, lat, lon = asyncio.run(_query_api(ip))
         if ret == 'failed':
             return None, None
-        print(ret)
+        # print(ret)
     return lat, lon
 
 # read the local geo database
@@ -32,7 +32,7 @@ for i in range(32):
 
 # query local geo database
 def _query_by_db(ip, mask=mask) -> (int, int):
-    print('query db...')
+    # print('query db...')
     ip = int(ipaddress.ip_address(ip))
     while ip != 0:
         ip &= mask
@@ -81,7 +81,7 @@ async def _await_response(session, url, auth):
 
 # query multiple geo web-service concurrently and return the first response
 async def _query_api(ip):
-    print('query api...')
+    # print('query api...')
     for coro in asyncio.as_completed([asyncio.create_task(_query_internal_api(ip)),
                                       asyncio.create_task(_query_external_api(ip))]):
         result = await coro

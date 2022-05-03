@@ -32,7 +32,7 @@ class CdnHttp(BaseHTTPRequestHandler):
         page = requests.utils.unquote(self.path[1:])
         content = cache.get(page)
         if len(content) == 0:
-            print('downloading from origin for page {}...'.format(page))
+            # print('downloading from origin for page {}...'.format(page))
 
             resp = session.get('http://{}:8080/{}'.format(ORIGIN, page))
             if resp.status_code == 404:
@@ -45,7 +45,7 @@ class CdnHttp(BaseHTTPRequestHandler):
         else:
             decompressed = gzip.decompress(content)
 
-        print('process time: ' + str(time.time() - start), end='\n')
+        # print('process time: ' + str(time.time() - start), end='\n')
 
         # send response
         self.send_response(200)
@@ -56,13 +56,13 @@ class CdnHttp(BaseHTTPRequestHandler):
 
         self.wfile.write(decompressed)
 
-        print('total time: ' + str(time.time() - start), end='\n')
+        # print('total time: ' + str(time.time() - start), end='\n')
 
 
 if __name__ == '__main__':
     with ThreadingHTTPServer(('0.0.0.0', 40007), CdnHttp) as httpd:
         try:
-            print('Serving on port %s' % PORT)
+            # print('Serving on port %s' % PORT)
             httpd.serve_forever()
         finally:
             httpd.server_close()
