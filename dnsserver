@@ -11,7 +11,7 @@ from dnslib import DNSRecord, RR, QTYPE, CLASS, A
 PORT = sys.argv[1]
 NAME = sys.argv[2]
 
-
+# dns server for queries
 class Server(socketserver.BaseRequestHandler):
     def handle(self) -> None:
         query, conn = DNSRecord.parse(self.request[0]), self.request[1]
@@ -22,6 +22,7 @@ class Server(socketserver.BaseRequestHandler):
         ans = query.reply()
         for q in query.questions:
             if q.qname == NAME:
+                # map a replica server
                 replica = map_replica(self.client_address[0])
                 ans.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 60, A(replica)))
                 print('answer: ' + replica)

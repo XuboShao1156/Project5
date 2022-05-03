@@ -4,7 +4,7 @@ import ipaddress
 import time
 import requests
 
-
+# query the geo location of given ip
 def query(ip) -> (int, int):
     lat, lon = _query_by_db(ip)
     if lat is None or lon is None:
@@ -14,7 +14,7 @@ def query(ip) -> (int, int):
         print(ret)
     return lat, lon
 
-
+# read the local geo database
 def _build_geo_db():
     d = dict()
     with open('geo_db.csv', 'r') as f:
@@ -30,7 +30,7 @@ mask = 0x1
 for i in range(32):
     mask = mask << 1 | 0x1
 
-
+# query local geo database
 def _query_by_db(ip, mask=mask) -> (int, int):
     print('query db...')
     ip = int(ipaddress.ip_address(ip))
@@ -41,7 +41,7 @@ def _query_by_db(ip, mask=mask) -> (int, int):
         mask <<= 1
     return None, None
 
-
+# try get a url
 def _try_get(session, url, auth):
     try:
         return session.get(url, auth=auth)
@@ -49,6 +49,7 @@ def _try_get(session, url, auth):
         return 'failed'
 
 
+# query external geo web-service
 external_session = requests.Session()
 _try_get(external_session, 'https://geolite.info', None)
 async def _query_external_api(ip) -> (str, int):
@@ -61,6 +62,7 @@ async def _query_external_api(ip) -> (str, int):
     return 'query external api...', round(body['location']['latitude']), round(body['location']['longitude'])
 
 
+# query internal geo web-service on Linode
 internal_session = requests.Session()
 _try_get(internal_session, 'http://45.33.89.80:40007/geoip/45.33.89.80', None)
 async def _query_internal_api(ip) -> (str, int, int):
@@ -77,6 +79,7 @@ async def _await_response(session, url, auth):
     return resp
 
 
+# query multiple geo web-service concurrently and return the first response
 async def _query_api(ip):
     print('query api...')
     for coro in asyncio.as_completed([asyncio.create_task(_query_internal_api(ip)),

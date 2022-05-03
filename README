@@ -1,0 +1,53 @@
+# High Level Approach
+## DNS
+To determine the location of ip address,
+our DNS server uses geo-location data from both ASes (AWS, Linode) and [GeoLite](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data?lang=en),
+then we use [Haversine formula](https://en.wikipedia.org/wiki/Haversine_formula) to compute the nearest replica server.
+To improve performance, we also cached the computed mapping from the client ip to the target replica ip for later requests.
+We didn't use scamper since it is far too slow than querying a local database or even a web service,
+though it may improve the latency later by replacing the target replica for a client ip stored in cache,
+but this rarely happens in our set-up since our replicas servers are scatter so far away and the distance would dominate the latency.
+
+## HTTP Server
+The HTTP server takes in a HTTP request from clients and response with a corresponding page retrieved from origin server.
+The retrieved page will be compressed using gzip and cached locally in a two-layer cache (memory and disk).
+It also uses HTTP/1.1 to improve the efficiency for supporting clients.
+When starting up, the HTTP server will also try to prefetch some pages (current the most frequent 10 pages according to 'pageviews.csv').
+
+
+# Implementation
+## DNS
+1. For the dns query, DNS server uses `dnslib` to parse the request and assemble the response;
+2. DNS server will first query the local geo-database ot find the location of the client ip.
+    If not found, then it will query the web services.
+    Finally, it the ip is still not found, it will use the default replica ('p5-http-a.5700.network').
+
+## HTTP
+The cache is most important component of the server.
+We design it as a two-layer cache:
+1. memory-layer: we store the the pages with a higher frequency than 1650 according to 'pageviews.csv'.
+    This value is set based on our investigation of all content from origin server.
+    We found that the size of all pages with higher frequency than 1650 is about 19.57MB after compressing each page with gzip.
+2. disk-layer: we compress and store pages with lower frequency than 1650 under the folder 'pages' on disk.
+    To limit the disk usage under 20MB and maximum the performance, these pages are prioritized by their frequency according to 'pageviews.csv'.
+    If adding a new page will cause the disk usage to exceed 20MB, we will first delete few least-frequent pages before adding it.
+    Based on our investigation, if using gzip, we can eventually cache all pages with higher frequency than 993.
+3. We didn't implement the page exchange between the two layers since we found the performance difference between the two is rather trivial comparing with network latency.
+
+Our investigation for these pages is based on 'size.log' which is produced by 'statistics.py'.
+The 'size.log' includes information of most frequent pages with a total size lower than 50MB.
+
+
+# Challenges
+## DNS
+The geo-location database overall IP addresses is pretty large considering our limit on usage.
+We put a lot of work and tried several ways to combine IP addresses but didn't work very well.
+We eventually decide to only use geo-database for ASes like AWS.
+
+## HTTP
+1. The cache is initially designed as a LFU according to the frequency of pages hit on our server instead of using 'pageviews.csv',
+    thus it didn't work very well at the beginning.
+2. The scripts are hard to be correct and weird things can happen.
+    At the beginning, if the server is started by the runCDN which is using remote ssh command, it fails on our stress test.
+    The problem is that the std output of the program somehow blocks it.
+    We spent a lot of time troubleshooting and eventually solved it by redirecting the program's output to '/dev/null'.

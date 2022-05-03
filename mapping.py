@@ -12,6 +12,7 @@ replicas = [['p5-http-a.5700.network', '50.116.41.109', (34, -84)],
             ['p5-http-f.5700.network', '88.80.186.80', (52, 0)],
             ['p5-http-g.5700.network', '172.105.55.115', (19, 73)]]
 
+# map a client ip to a replica server's ip
 cache = dict()
 def map_replica(ip) -> str:
     if ip in cache:
@@ -38,7 +39,7 @@ def map_replica(ip) -> str:
     cache[ip] = replicas[best][1]
     return cache[ip]
 
-
+# compute the distance between two geo locations
 def _distance(lat1, lon1, lat2, lon2) -> float:
     lat1 = radians(lat1)
     lon1 = radians(lon1)
@@ -51,7 +52,7 @@ def _distance(lat1, lon1, lat2, lon2) -> float:
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return 6373 * c
 
-
+# used to build the 'replicas' list
 def _query_replicas_ip():
     servers = []
     with open('replica_server', 'r') as f:
