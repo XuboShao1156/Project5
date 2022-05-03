@@ -74,8 +74,9 @@ We eventually decide to only use geo-database for ASes like AWS.
 ### Cache: we will try to implement the page exchange between memory and disk to further improve performance.
 ### Server Performance: considering our servers whether DNS server or HTTP server,
     are both IO-Bounded since they both have to query external resources under certain conditions,
-    We believe making such operations asynchronous would improve the performance a lot.
+    we believe making such operations asynchronous would improve the performance a lot.
 
-# Colloboration
+
+# Collaboration
 1. Kezhi Xiong worked on scripts, DNS server, HTTP cache and evaluation
 2. Jiatian Wang worked on HTTP server and cache.
