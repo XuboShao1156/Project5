@@ -38,10 +38,12 @@ class CdnHttp(BaseHTTPRequestHandler):
                 self.send_error(404, 'Page not Found')
                 return
 
+            decompressed = resp.content
             content = gzip.compress(resp.content)
             cache.put(page, content)
+        else:
+            decompressed = gzip.decompress(content)
 
-        decompressed = gzip.decompress(content)
         print('process time: ' + str(time.time() - start), end='\n')
 
         # send response
