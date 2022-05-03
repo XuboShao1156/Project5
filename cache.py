@@ -1,11 +1,9 @@
-import asyncio
 import csv
 import gzip
 import os
 import heapq
 import time
 import requests
-import requests.utils
 
 # The content of pages with higher frequency than MEM_MIN_FREQ will be compressed by gzip and stored in memory.
 # According to our analysis script (see statistics.py) and measurements (see size.log),
@@ -14,13 +12,6 @@ MEM_MIN_FREQ = 1650
 
 # limit the disk usage to store content of pages
 DISK_LIMIT = 20 * 1000 * 1000
-
-async def concurrent_request(host, pages):
-    aws = []
-    for p in pages:
-        aws.append(asyncio.get_event_loop().run_in_executor(None, requests.get,
-                                                            'http://{}:8080/{}'.format(host, p)))
-    return await asyncio.gather(*aws)
 
 class Cache(object):
     """
@@ -67,10 +58,12 @@ class Cache(object):
 
         start = time.time()
 
-        for resp in asyncio.run(concurrent_request(origin, pages)):
-            if resp.status_code / 100 != 2:
-                    continue
-            self.put(requests.utils.unquote(resp.request.path_url[1:]), gzip.compress(resp.content))
+        session = requests.session()
+        for p in pages:
+            resp = session.get('http://{}:8080/{}'.format(origin, p))
+            if resp.status_code != 200:
+                continue
+            self.put(p, gzip.compress(resp.content))
 
         print('prefetch costs: {}'.format(time.time() - start))
 

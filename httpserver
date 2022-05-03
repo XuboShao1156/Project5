@@ -15,7 +15,7 @@ class CdnHttp(BaseHTTPRequestHandler):
     """
     protocol_version = 'HTTP/1.1'
 
-    cache = Cache(mem_min_freq=MEM_MIN_FREQ, disk_threshold=DISK_LIMIT, origin=ORIGIN, prefetch_size=50)
+    cache = Cache(mem_min_freq=MEM_MIN_FREQ, disk_threshold=DISK_LIMIT, origin=ORIGIN, prefetch_size=10)
     session = requests.session()
 
     def do_GET(self, cache=cache, session=session):
